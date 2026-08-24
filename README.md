@@ -1,2 +1,18 @@
 # HAILEKETER_OS
- A self-developed simple operating system based on x86 and 32-bit using assembly and C++
+## 简介
+ 使用NASM汇编与C++一个基于x86架构的自研操作系统
+## 开发相关
+```diff
+### ✨已实现功能
+ +✅实现了从16位实模式到32位保护模式的切换
+ +✅实现了双阶段引导
+ +✅完善GDT
+ +✅成功解除A20地址线限制，增加虚拟机/真机的兼容性
+ +✅实现了VGA的基础输出
+```diff
+### 📝计划
+ #### 完善VGA
+ #### 使真机能够正常运行
+ #### 完善相关驱动
+ #### 实现32位内存分页
+ 
