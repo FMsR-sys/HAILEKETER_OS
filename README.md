@@ -22,4 +22,8 @@
   完善相关驱动
 
   实现32位内存分页
+
+## 🛠编译与运行
+工具链：i686‑elf‑gcc、nasm、qemu‑system‑i386，VScode
+
  
