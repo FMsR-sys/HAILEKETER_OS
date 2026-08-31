@@ -27,4 +27,7 @@ SECTIONS
         *(.bss)
         __bss_end = .;
     }
+
+    __kernel_start = 0x100000;
+    __kernel_end = .;
 }

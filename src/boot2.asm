@@ -10,11 +10,11 @@ STACK_SAFE_LOW  equ 0x80000
 STACK_SAFE_HIGH equ 0xA0000
 
 start:
-    xor ax, ax
-    mov ds, ax
-    mov es, ax
-    mov ss, ax
-    mov sp, 0x9000
+    xor ax,ax
+    mov ds,ax
+    mov es,ax
+    mov ss,ax
+    mov sp,0x9000
 
     mov ax,0xB800
     mov es,ax
@@ -23,9 +23,8 @@ start:
     mov ax,0x1E20
     rep stosw
 
-    call get_e820_map
-
     xor ax,ax
+    ;该死，es没初始化
     mov es,ax
     mov ah,0x02
     mov al,32
@@ -36,7 +35,13 @@ start:
     int 0x13
     jc read_error
 
+    call get_e820_map
+
     call enable_a20
+
+    ;call t_e820_count
+    ;hlt
+    ;jmp hang  该死的调试
 
     cli
     lgdt [gdt_ptr]
@@ -46,37 +51,37 @@ start:
     jmp 0x08:code32
 
 get_e820_map:
-    push bx
     push di
     push cx
     push dx
     push si
+    push ebx
 
-    xor ax, ax
-    mov [E820_ENTRY_CNT], ax
+    xor ax,ax
+    mov [E820_ENTRY_CNT],ax
 
-    mov ebx, 0
+    mov ebx,0
 
-    mov ax, ds
-    mov es, ax
-    mov di, E820_BUF
+    mov ax,ds
+    mov es,ax
+    mov di,E820_BUF
 
 .e820_loop:
-    mov eax, 0xE820
-    mov edx, 0x534D4150
-    mov ecx, 20
+    mov eax,0xE820
+    mov edx,0x534D4150
+    mov ecx,24
 
     int 0x15
 
     jc .e820_done
-    cmp eax, 0x534D4150
+    cmp eax,0x534D4150
     jne .e820_done
 
     inc word [E820_ENTRY_CNT]
 
-    add di, 20
+    add di,24
 
-    cmp ebx, 0
+    cmp ebx,0
     jnz .e820_loop
 
 .e820_done:
@@ -84,23 +89,20 @@ get_e820_map:
     pop dx
     pop cx
     pop di
-    pop bx
+    pop ebx
     ret
-    call get_e820_map
-    call test_e820_count
-
 
 enable_a20:
     push ax
-    in al, 0x64
+    in al,0x64
     test al, 2
     jnz $-4
-    mov al, 0xD1
+    mov al,0xD1
     out 0x64, al
-    in al, 0x64
+    in al,0x64
     test al, 2
     jnz $-4
-    mov al, 0xDF
+    mov al,0xDF
     out 0x60, al
     pop ax
     ret
@@ -119,25 +121,25 @@ print_err:
     mov [es:di+1],bl
     add di,2
     jmp print_err
-test_e820_count:
-    mov ax, 0xB800
+t_e820_count:
+    mov ax,0xB800
     mov es, ax
     mov di, 0
 
     mov cx, [E820_ENTRY_CNT]
 
-    mov al, 'C'
-    mov ah, 0x1E
-    mov [es:di], ax
-    add di, 2
+    mov al,'C'
+    mov ah,0x1E
+    mov [es:di],ax
+    add di,2
 
-    mov al, '='
-    mov [es:di], ax
-    add di, 2
+    mov al,'='
+    mov [es:di],ax
+    add di,2
 
-    mov al, cl
-    add al, '0'
-    mov [es:di], ax
+    mov al,cl
+    add al,'0'
+    mov [es:di],ax
 
     ret
 
@@ -179,16 +181,16 @@ code32:
     mov esp,0x90000
 
     cld
-    mov esi, 0x1000
-    mov edi, KERNEL_BASE
-    mov ecx, KERNEL_SIZE
+    mov esi,0x1000
+    mov edi,KERNEL_BASE
+    mov ecx,KERNEL_SIZE
     rep movsb
 
     call zero_usable_ext_mem
 
-    mov edi, 0xA0000
-    xor eax, eax
-    mov ecx, 2048
+    mov edi,0xA0000
+    xor eax,eax
+    mov ecx,2048
     rep stosd
 
 .flush:
@@ -199,8 +201,8 @@ code32:
     lodsb
     test al,al
     jz .print_done
-    mov [edi], al
-    mov [edi+1], ah
+    mov [edi],al
+    mov [edi+1],ah
     add edi,2
     jmp .print_ok
 .print_done:
@@ -214,40 +216,40 @@ zero_usable_ext_mem:
     push edx
     push ebp
 
-    mov esi, E820_BUF
-    xor ebx, ebx
-    mov bx, [E820_ENTRY_CNT]
+    mov esi,E820_BUF
+    xor ebx,ebx
+    mov bx,[E820_ENTRY_CNT]
 .entry_loop:
     cmp ebx, 0
     je .zero_finish
     dec ebx
 
-    mov edx, [esi + 16]
+    mov edx,[esi + 16]
     cmp edx, 1
     jne .next_entry
 
-    mov eax, [esi + 0]
-    mov edx, [esi + 4]
-    mov ecx, [esi + 8]
-    mov ebp, [esi + 12]
+    mov eax,[esi + 0]
+    mov edx,[esi + 4]
+    mov ecx,[esi + 8]
+    mov ebp,[esi + 12]
 
-    cmp edx, 0
+    cmp edx,0
     jne .next_entry
 
-    cmp eax, KERNEL_BASE
+    cmp eax,KERNEL_BASE
     jb .next_entry
 
     mov edx,eax
     add edx,ecx
 
-    cmp eax, KERNEL_END
+    cmp eax,KERNEL_END
     jae .check_stack
     mov eax,KERNEL_END
     cmp edx,eax
     jbe .next_entry
 
 .check_stack:
-    cmp eax, STACK_SAFE_HIGH
+    cmp eax,STACK_SAFE_HIGH
     jb .next_entry
 
 .do_zero:

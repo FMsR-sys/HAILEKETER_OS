@@ -3,7 +3,7 @@
 
 #define E820_TABLE_ADDR   0x5000
 #define E820_COUNT_ADDR   0x500
-#define E820_ENTRY_SIZE   20
+#define E820_ENTRY_SIZE   24
 
 namespace e820
 {
@@ -14,8 +14,7 @@ namespace e820
 
         for (int i = 0; i < count; i++)
         {
-            e820_record* rec = reinterpret_cast<e820_record*>(
-                E820_TABLE_ADDR + i * E820_ENTRY_SIZE);
+            e820_record* rec = reinterpret_cast<e820_record*>(E820_TABLE_ADDR + i * E820_ENTRY_SIZE);
 
             vga::vga_out_string("Base: ");
             e820_out_number(rec->base_low);

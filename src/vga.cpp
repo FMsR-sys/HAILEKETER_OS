@@ -6,9 +6,9 @@ uint8_t vga::color = 0x1E;
 uint8_t vga::cursor_x = 0;
 uint8_t vga::cursor_y = 0;
 
-void vga::vga_out_sc(int x,int y,char sc)
+void vga::vga_out_sc(char sc)
 {
-    int idx = y * vga::VGA_WIDE + x;
+    int idx = vga::cursor_y * vga::VGA_WIDE + vga::cursor_x;
     vga::VGA_BUFFER[idx] = static_cast<uint16_t>(sc) | (static_cast<uint16_t>(vga::color) << 8);
 }
 
@@ -25,7 +25,7 @@ void vga::vga_out_string(const char* st)
         }
         else
         {
-            vga::vga_out_sc(vga::cursor_x,vga::cursor_y,*st);
+            vga::vga_out_sc(*st);
             st++;
             vga::cursor_x++;
             vga::vga_move_cursor(vga::cursor_x, vga::cursor_y);
@@ -100,4 +100,16 @@ void vga::vga_move_cursor(int x,int y)
     io::outb(0x3D5, (uint8_t)(pos & 0xFF));
     io::outb(0x3D4, 0x0E);
     io::outb(0x3D5, (uint8_t)((pos >> 8) & 0xFF));
+}
+
+void vga::vga_out_sixteen(uint32_t num)
+{
+    const char hex_table[] = "0123456789ABCDEF";
+    for(int shift = 28; shift >= 0; shift -= 4)
+    {
+        uint8_t nibble = (num >> shift) & 0xF;
+        char c = hex_table[nibble];
+        vga::vga_out_sc(c);
+        vga::cursor_x++;
+    }
 }

@@ -15,6 +15,7 @@ struct e820_record
     uint32_t len_low;
     uint32_t len_high;
     uint32_t type;
+    uint32_t attr;
 };
 
 namespace e820
