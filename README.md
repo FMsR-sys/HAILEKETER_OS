@@ -1,5 +1,3 @@
-# HAILEKETER_OS
-
 使用 NASM 汇编与 C++ 开发的、基于 x86‑32 架构的自研操作系统。
 
 ## 开发相关
@@ -50,3 +48,7 @@
 - 编译工具链：`i686‑elf‑g++`、NASM
 - 虚拟机测试：`qemu‑system‑i386`
 - 开发环境：VSCode + MSYS2
+
+## 效果
+<img width="722" height="399" alt="微信图片_20260905120631" src="https://github.com/user-attachments/assets/2fe454d7-f3cc-45c9-ae2e-15b05e722f50" />
+
