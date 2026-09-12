@@ -25,7 +25,8 @@ namespace vga
     void vga_move_cursor(int x,int y);
     void vga_out_sixteen(uint32_t num);
     void put_char(char c);
-
+    void scroll_up();
+    void scroll_down();
 }
 
 #endif

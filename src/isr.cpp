@@ -11,6 +11,7 @@ static const char sc_lower[] =
     '\\','z','x','c','v','b','n','m',',','.','/', 0,  '*',
     0,   ' ','0'
 };
+
 static const char sc_upper[] =
 {
     0,   0,  '!','@','#','$','%','^','&','*','(',')','_','+', 0,
@@ -23,7 +24,7 @@ static const char sc_upper[] =
 static uint8_t last_scan = 0xFF;
 static bool shift_left  = false;
 static bool shift_right = false;
-static bool ext_flag = false;   // 标记是否收到 0xE0 扩展前缀
+static bool ext_flag = false;
 
 extern "C" void irq1_handler();
 extern "C" void irq1_handler()
@@ -40,34 +41,48 @@ extern "C" void irq1_handler()
     bool released = (scancode & 0x80);
     uint8_t code = scancode & 0x7F;
 
-    //=====方向键 扩展码=====
     if(ext_flag)
     {
         ext_flag = false;
         if(!released)
         {
-            if(code == 0x48) // ↑
+            if(code == 0x48)
             {
-                if(vga::cursor_y > 0) vga::cursor_y--;
-                vga::vga_move_cursor(vga::cursor_x, vga::cursor_y);
+                vga::scroll_up();
                 pic::eoi(1);
                 return;
             }
-            if(code == 0x50) // ↓
+
+            if(code == 0x50)
             {
-                if(vga::cursor_y < vga::VGA_HIGH - 1) vga::cursor_y++;
-                vga::vga_move_cursor(vga::cursor_x, vga::cursor_y);
+                vga::scroll_down();
                 pic::eoi(1);
                 return;
             }
-            if(code == 0x4B) // ←
+
+            if(code == 0x49)
+            {
+                vga::scroll_up();
+                pic::eoi(1);
+                return;
+            }
+
+            if(code == 0x51)
+            {
+                vga::scroll_down();
+                pic::eoi(1);
+                return;
+            }
+
+            if(code == 0x4B)
             {
                 if(vga::cursor_x > 0) vga::cursor_x--;
                 vga::vga_move_cursor(vga::cursor_x, vga::cursor_y);
                 pic::eoi(1);
                 return;
             }
-            if(code == 0x4D) // →
+
+            if(code == 0x4D)
             {
                 if(vga::cursor_x < vga::VGA_WIDE - 1) vga::cursor_x++;
                 vga::vga_move_cursor(vga::cursor_x, vga::cursor_y);
@@ -77,13 +92,13 @@ extern "C" void irq1_handler()
         }
     }
 
-    // -------- Shift 左右按键 --------
     if(code == 0x2A)
     {
         shift_left = !released;
         pic::eoi(1);
         return;
     }
+
     if(code == 0x36)
     {
         shift_right = !released;
@@ -91,7 +106,6 @@ extern "C" void irq1_handler()
         return;
     }
 
-    // 松开按键，清空防抖标记
     if(released)
     {
         last_scan = 0xFF;
@@ -99,32 +113,29 @@ extern "C" void irq1_handler()
         return;
     }
 
-    // 屏蔽硬件长按连发
     if(scancode == last_scan)
     {
         pic::eoi(1);
         return;
     }
-    last_scan = scancode;
 
+    last_scan = scancode;
     bool shift = shift_left || shift_right;
 
-    // 回车键 0x1C
     if(code == 0x1C)
     {
         vga::put_char('\n');
         pic::eoi(1);
         return;
     }
-    // 退格键 0x0E
+
     if(code == 0x0E)
     {
         vga::put_char('\b');
         pic::eoi(1);
         return;
     }
-
-    // 输出普通字符
+    
     if(code < sizeof(sc_lower))
     {
         char ch;
@@ -132,12 +143,10 @@ extern "C" void irq1_handler()
             ch = sc_upper[code];
         else
             ch = sc_lower[code];
-
         if(ch != 0)
         {
             vga::put_char(ch);
         }
     }
-
     pic::eoi(1);
 }

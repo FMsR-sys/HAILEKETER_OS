@@ -6,6 +6,7 @@
 #include "pic.hpp"
 #include "idt.hpp"
 #include "isr.hpp"
+#include "kmalloc.hpp"
 
 extern "C" void kernel_main()
 {
@@ -20,27 +21,68 @@ extern "C" void kernel_main()
 
     vga::vga_clean();
     e820::e820_out();
+
     uint32_t pd_addr = 0x200000;
     vga::vga_out_string("\nGoing to turn paging on...");
     identity_paging_init(pd_addr);
     vga::vga_out_string("\nPaging ON!");
-    pmm::pmm_init();
+
+    pmm::init();
     vga::vga_out_string("\npmm init ok!\n");
-    uint32_t mem1 = pmm::pmm_pages_allocate();
+
+    uint32_t mem1 = pmm::pages_allocate();
     vga::vga_out_string("Allocated page: ");
     vga::vga_out_sixteen(mem1);
-    pmm::pmm_pages_release(mem1);
+    pmm::pages_release(mem1);
     vga::vga_out_string("\nReleased!\n");
+
     uint8_t pic_mask = io::read_uint8(0x21);
     vga::vga_out_string("IO test, PIC mask = ");
     vga::vga_out_sixteen(pic_mask);
     vga::vga_out_string("\nGoing to trun remap...\n");
+
     pic::remap(0x20, 0x28);
     vga::vga_out_string("remap finish!\n");
+
     idt::init();
     idt::set(0x21, (uint32_t)irq1_stub, 0x08, 0x8E);
     pic::unmask(1);
     vga::vga_out_string("idt finish!\n");
+
+    const uint32_t HEAP_START = 0x01000000;
+    const uint32_t HEAP_SIZE  = 16 * 1024 * 1024; //16MB
+
+    vga::vga_out_string("Heap mark used pages...\n");
+    for(uint32_t addr = HEAP_START; addr < HEAP_START + HEAP_SIZE; addr += 4096)
+    {
+        pmm::mark_used(addr);
+    }
+
+    heap::init(HEAP_START, HEAP_SIZE);
+    vga::vga_out_string("heap init done!\n");
+
+    char* buf1 = (char*)kmalloc(256);
+    vga::vga_out_string("kmalloc buf1: ");
+    vga::vga_out_sixteen((uint32_t)buf1);
+    buf1[0] = 'H';
+    buf1[1] = 'i';
+    vga::vga_out_string("\n");
+
+    void* buf2 = kmalloc(512);
+    void* buf3 = kmalloc(1024);
+    vga::vga_out_string("buf2 = ");
+    vga::vga_out_sixteen((uint32_t)buf2);
+    vga::vga_out_string(" buf3 = ");
+    vga::vga_out_sixteen((uint32_t)buf3);
+    vga::vga_out_string("\n");
+
+    vga::vga_out_string("kfree buf2...\n");
+    kfree(buf2);
+
+    kfree(buf1);
+    kfree(buf3);
+    vga::vga_out_string("All free finished!\nHeap test OK.\n");
+
     asm volatile("sti");
 
     while(true)

@@ -143,7 +143,6 @@ t_e820_count:
 
     ret
 
-
 halt:
     cli
 .h: hlt
@@ -262,7 +261,7 @@ zero_usable_ext_mem:
     pop ecx
 
 .next_entry:
-    add esi, 20
+    add esi,24
     jmp .entry_loop
 
 .zero_finish:

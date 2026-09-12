@@ -11,13 +11,13 @@ typedef unsigned int uint32_t;
 
 namespace pmm
 {
-    void pmm_init();
-    uint32_t pmm_pages_allocate();
-    void pmm_pages_release(uint32_t phys_addr);
-    void pmm_mark_used(uint32_t phys_addr);
-    void pmm_mark_free(uint32_t phys_addr);
-    bool pmm_is_used(uint32_t phys_addr);
-    bool pmm_is_free(uint32_t phys_addr);
+    void init();
+    uint32_t pages_allocate();
+    void pages_release(uint32_t phys_addr);
+    void mark_used(uint32_t phys_addr);
+    void mark_free(uint32_t phys_addr);
+    bool is_used(uint32_t phys_addr);
+    bool is_free(uint32_t phys_addr);
 }
 
 #endif

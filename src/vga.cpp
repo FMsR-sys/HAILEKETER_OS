@@ -5,55 +5,92 @@ uint8_t vga::color = 0x1E;
 uint8_t vga::cursor_x = 0;
 uint8_t vga::cursor_y = 0;
 
+#define BACK_ROWS 120
+uint16_t back_buffer[BACK_ROWS][80];
+uint32_t view_offset = 0;
+uint32_t write_line = 0;
+uint32_t write_col = 0;
+
+static void vga_render(void)
+{
+    for(uint32_t y = 0; y < 25; y++)
+    {
+        uint32_t src_y = view_offset + y;
+        for(uint32_t x = 0; x < 80; x++)
+        {
+            uint32_t dst_idx = y * 80 + x;
+            if(src_y < BACK_ROWS)
+                vga::VGA_BUFFER[dst_idx] = back_buffer[src_y][x];
+            else
+                vga::VGA_BUFFER[dst_idx] = (static_cast<uint16_t>(vga::color) << 8) | ' ';
+        }
+    }
+}
+
 void vga::vga_out_sc(char sc)
 {
-    int idx = vga::cursor_y * vga::VGA_WIDE + vga::cursor_x;
-    vga::VGA_BUFFER[idx] = static_cast<uint16_t>(sc) | (static_cast<uint16_t>(vga::color) << 8);
+    uint16_t val = static_cast<uint16_t>(sc) | (static_cast<uint16_t>(vga::color) << 8);
+    back_buffer[write_line][write_col] = val;
+    write_col++;
 }
 
 void vga::put_char(char c)
 {
     if(c == '\b')
     {
-        if (vga::cursor_x > 0)
+        if (write_col > 0)
         {
-            vga::cursor_x--;
+            write_col--;
         }
-        else if (vga::cursor_y > 0)
+        else if (write_line > 0)
         {
-            vga::cursor_y--;
-            vga::cursor_x = vga::VGA_WIDE - 1;
+            write_line--;
+            write_col = 79;
         }
-        int idx = vga::cursor_y * vga::VGA_WIDE + vga::cursor_x;
-        vga::VGA_BUFFER[idx] = (static_cast<uint16_t>(vga::color) << 8) | ' ';
-        vga::vga_move_cursor(vga::cursor_x, vga::cursor_y);
-        return;
+        back_buffer[write_line][write_col] = (static_cast<uint16_t>(vga::color) << 8) | ' ';
+        goto refresh;
     }
     if(c == '\n')
     {
-        vga::cursor_x = 0;
-        vga::cursor_y++;
-        vga::vga_move_cursor(vga::cursor_x, vga::cursor_y);
-        return;
+        write_col = 0;
+        write_line++;
+        if(write_line >= BACK_ROWS)
+        {
+            for(uint32_t y = 1; y < BACK_ROWS; y++)
+            {
+                for(uint32_t x = 0; x < 80; x++)
+                    back_buffer[y-1][x] = back_buffer[y][x];
+            }
+            write_line = BACK_ROWS - 1;
+            for(uint32_t x = 0; x < 80; x++)
+                back_buffer[write_line][x] = (static_cast<uint16_t>(vga::color) << 8) | ' ';
+        }
+        goto refresh;
     }
-
     vga::vga_out_sc(c);
-    vga::cursor_x++;
-    vga::vga_move_cursor(vga::cursor_x, vga::cursor_y);
-
-    if (vga::cursor_x >= vga::VGA_WIDE)
+    if (write_col >= 80)
     {
-        vga::cursor_x = 0;
-        vga::cursor_y++;
-        vga::vga_move_cursor(vga::cursor_x, vga::cursor_y);
+        write_col = 0;
+        write_line++;
+        if(write_line >= BACK_ROWS)
+        {
+            for(uint32_t y = 1; y < BACK_ROWS; y++)
+            {
+                for(uint32_t x = 0; x < 80; x++)
+                    back_buffer[y-1][x] = back_buffer[y][x];
+            }
+            write_line = BACK_ROWS - 1;
+            for(uint32_t x = 0; x < 80; x++)
+                back_buffer[write_line][x] = (static_cast<uint16_t>(vga::color) << 8) | ' ';
+        }
     }
-    while (vga::cursor_y >= vga::VGA_HIGH)
-    {
-        vga::vga_screen_up();
-        vga::cursor_y--;
-        vga::cursor_x = 0;
-        vga::vga_move_cursor(vga::cursor_x, vga::cursor_y);
-    }
+refresh:
+    uint32_t target_view = (write_line >= 24) ? (write_line - 24) : 0;
+    if(view_offset < target_view)
+        view_offset = target_view;
+    vga_render();
+    uint32_t disp_y = write_line - view_offset;
+    vga::vga_move_cursor(write_col, disp_y);
 }
 
 void vga::vga_out_string(const char* st)
@@ -67,33 +104,22 @@ void vga::vga_out_string(const char* st)
 
 void vga::vga_clean()
 {
-    uint16_t* buf = reinterpret_cast<uint16_t*>(vga::VGA_BUFFER);
-    for(int i = 0; i < vga::VGA_WIDE * vga::VGA_HIGH; i++)
+    for(uint32_t y = 0; y < BACK_ROWS; y++)
     {
-        buf[i] = (static_cast<uint16_t>(vga::color) << 8) | ' ';
+        for(uint32_t x = 0; x < 80; x++)
+        {
+            back_buffer[y][x] = (static_cast<uint16_t>(vga::color) << 8) | ' ';
+        }
     }
-    vga::cursor_x = 0;
-    vga::cursor_y = 0;
-    vga::vga_move_cursor(vga::cursor_x, vga::cursor_y);
+    write_col = 0;
+    write_line = 0;
+    view_offset = 0;
+    vga_render();
+    vga::vga_move_cursor(0,0);
 }
 
 void vga::vga_screen_up()
 {
-    for (int y = 0;y < vga::VGA_HIGH - 1;y++)
-    {
-        for (int x = 0;x < vga::VGA_WIDE;x++)
-        {
-            int src_index = (y + 1) * vga::VGA_WIDE + x;
-            int dest_index = y * vga::VGA_WIDE + x;
-            vga::VGA_BUFFER[dest_index] = vga::VGA_BUFFER[src_index];
-        }
-    }
-    int bottom_y = vga::VGA_HIGH - 1;
-    for(int x = 0; x < vga::VGA_WIDE; x++)
-    {
-        int idx = bottom_y * vga::VGA_WIDE + x;
-        vga::VGA_BUFFER[idx] = (static_cast<uint16_t>(vga::color) << 8) | ' ';
-    }
 }
 
 uint8_t vga::vga_color(uint8_t bg,uint8_t ps)
@@ -112,7 +138,7 @@ void vga::vga_move_cursor(int x,int y)
 {
     vga::cursor_x = x;
     vga::cursor_y = y;
-    int pos = y * vga::VGA_WIDE + x;
+    int pos = y * 80 + x;
     io::write_uint16(0x3D4, 0x0F);
     io::write_uint16(0x3D5, (uint8_t)(pos & 0xFF));
     io::write_uint16(0x3D4, 0x0E);
@@ -126,7 +152,25 @@ void vga::vga_out_sixteen(uint32_t num)
     {
         uint8_t nibble = (num >> shift) & 0xF;
         char c = hex_table[nibble];
-        vga::vga_out_sc(c);
-        vga::cursor_x++;
+        vga::put_char(c);
+    }
+}
+
+void vga::scroll_up(void)
+{
+    if(view_offset > 0)
+    {
+        view_offset--;
+        vga_render();
+    }
+}
+
+void vga::scroll_down(void)
+{
+    uint32_t max_view = (write_line >= 24) ? (write_line - 24) : 0;
+    if(view_offset < max_view)
+    {
+        view_offset++;
+        vga_render();
     }
 }

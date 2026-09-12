@@ -10,7 +10,7 @@ namespace pmm
 {
     static uint8_t bitmap[ 1024*1024U / 8U ];
 
-    void pmm_init()
+    void init()
     {
         for (uint32_t i = 0;i < sizeof(bitmap);i++)
         {
@@ -53,10 +53,10 @@ namespace pmm
             uint32_t bit_idx  = page % 8;
             bitmap[byte_idx] |= (1U << bit_idx);
         }
-        bitmap[256/8] &= ~(1U << (256%8));
+        //bitmap[256/8] &= ~(1U << (256%8));
     }
 
-    uint32_t pmm_pages_allocate()
+    uint32_t pages_allocate()
     {
         for (uint32_t byte = 0;byte < sizeof(bitmap);byte++)
         {
@@ -82,7 +82,7 @@ namespace pmm
         return 0x00000000;
     }
 
-    void pmm_pages_release(uint32_t phys_addr)
+    void pages_release(uint32_t phys_addr)
     {
         uint32_t page = phys_addr / PAGE_SIZE;
         uint32_t byte_idx = page / 8;
@@ -91,7 +91,7 @@ namespace pmm
         bitmap[byte_idx] &= ~(1U << bit_idx);
     }
 
-    void pmm_mark_used(uint32_t phys_addr)
+    void mark_used(uint32_t phys_addr)
     {
         uint32_t page = phys_addr / PAGE_SIZE;
         uint32_t byte_idx = page / 8;
@@ -100,7 +100,7 @@ namespace pmm
         bitmap[byte_idx] |= (1U << bit_idx);
     }
 
-    void pmm_mark_free(uint32_t phys_addr)
+    void mark_free(uint32_t phys_addr)
     {
         uint32_t page = phys_addr / PAGE_SIZE;
         uint32_t byte_idx = page / 8;
@@ -109,18 +109,18 @@ namespace pmm
         bitmap[byte_idx] &= ~(1U << bit_idx);
     }
 
-    bool pmm_is_free(uint32_t phys_addr)
+    bool is_free(uint32_t phys_addr)
     {
         uint32_t page = phys_addr / PAGE_SIZE;
         uint32_t byte_idx = page / 8;
         uint32_t bit_idx = page % 8;
 
-        return (bitmap[byte_idx] & (1U << bit_idx)) != 0;
+        return (bitmap[byte_idx] & (1U << bit_idx)) == 0;
     }
 
-    bool pmm_is_used(uint32_t phys_addr)
+    bool is_used(uint32_t phys_addr)
     {
-        return !pmm_is_free(phys_addr);
+        return !is_free(phys_addr);
     }
 
 }
