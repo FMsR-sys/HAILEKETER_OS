@@ -7,6 +7,7 @@
 #include "idt.hpp"
 #include "isr.hpp"
 #include "kmalloc.hpp"
+#include "vmm.hpp"
 
 extern "C" void kernel_main()
 {
@@ -30,8 +31,69 @@ extern "C" void kernel_main()
     pmm::init();
     vga::vga_out_string("\npmm init ok!\n");
 
+    vmm::init();
+    //--------------------------VMM测试-------------------------
+    vga::vga_out_string("\n--- VMM Manual Map Test ---\n");
+
+    const uint32_t test_virt = 0x6000000; //96MB虚拟地址
+
+    uint32_t test_phys = pmm::pages_allocate();
+    if(test_phys == 0)
+    {
+        vga::vga_out_string("PMM allocate test page FAIL!\n");
+    }
+    else
+    {
+        vga::vga_out_string("Allocated phys page: ");
+        vga::vga_out_sixteen(test_phys);
+        vga::vga_out_string("\n");
+
+        bool map_ok = vmm::map(test_virt, test_phys, PAGE_HAVE | PAGE_RW);
+        if(!map_ok)
+        {
+            vga::vga_out_string("vmm::map FAIL, err = ");
+            vga::vga_out_sixteen(vmm::err);
+            vga::vga_out_string("\n");
+        }
+        else
+        {
+            vga::vga_out_string("Map SUCCESS\n");
+
+            uint32_t check_phys = vmm::get_b(test_virt);
+            vga::vga_out_string("Virt ");
+            vga::vga_out_sixteen(test_virt);
+            vga::vga_out_string(" mapped to phys ");
+            vga::vga_out_sixteen(check_phys);
+            vga::vga_out_string("\n");
+
+            uint8_t* test_ptr = reinterpret_cast<uint8_t*>(test_virt);
+            *test_ptr = 0xAA;
+            if(*test_ptr == 0xAA)
+            {
+                vga::vga_out_string("Memory write/read test OK! value=0xAA\n");
+            }
+            else
+            {
+                vga::vga_out_string("Memory test FAILED!\n");
+            }
+            vga::vga_out_string("\n--- VMM unmap test ---\n");
+            uint32_t test_virt = 0x06000000;
+            if(vmm::unmap(test_virt))
+            {
+                vga::vga_out_string("unmap SUCCESS\n");
+            }
+            else
+            {
+                vga::vga_out_string("unmap FAILED, err:");
+                vga::vga_out_sixteen(vmm::err);
+                vga::vga_out_sc('\n');
+            }
+        }
+    }
+//----------------------------VMM测试结束-----------------------------
+
     uint32_t mem1 = pmm::pages_allocate();
-    vga::vga_out_string("Allocated page: ");
+    vga::vga_out_string("\nAllocated page: ");
     vga::vga_out_sixteen(mem1);
     pmm::pages_release(mem1);
     vga::vga_out_string("\nReleased!\n");
@@ -49,16 +111,14 @@ extern "C" void kernel_main()
     pic::unmask(1);
     vga::vga_out_string("idt finish!\n");
 
-    const uint32_t HEAP_START = 0x01000000;
-    const uint32_t HEAP_SIZE  = 16 * 1024 * 1024; //16MB
 
     vga::vga_out_string("Heap mark used pages...\n");
-    for(uint32_t addr = HEAP_START; addr < HEAP_START + HEAP_SIZE; addr += 4096)
+    for(uint32_t addr = heap::HEAP_START; addr < heap::HEAP_START + heap::HEAP_SIZE; addr += 4096)
     {
         pmm::mark_used(addr);
     }
 
-    heap::init(HEAP_START, HEAP_SIZE);
+    heap::init(heap::HEAP_START, heap::HEAP_SIZE);
     vga::vga_out_string("heap init done!\n");
 
     char* buf1 = (char*)kmalloc(256);

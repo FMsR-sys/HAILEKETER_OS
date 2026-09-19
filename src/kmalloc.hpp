@@ -18,6 +18,10 @@ struct heap_block
 
 namespace heap
 {
+    
+    const uint32_t HEAP_START = 0x01000000;
+    const uint32_t HEAP_SIZE  = 16 * 1024 * 1024; //16MB
+    
     void init(uint32_t start,uint32_t size);
 }
 

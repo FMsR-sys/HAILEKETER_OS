@@ -17,7 +17,9 @@ cat boot1.bin boot2.bin > boot.bin
 /c/i686-elf-tools-windows/bin/i686-elf-g++ -ffreestanding -m32 -c isr.cpp -o isr.o
 /c/i686-elf-tools-windows/bin/i686-elf-g++ -ffreestanding -m32 -c idt.cpp -o idt.o
 /c/i686-elf-tools-windows/bin/i686-elf-g++ -ffreestanding -m32 -c kmalloc.cpp -o kmalloc.o
-/c/i686-elf-tools-windows/bin/i686-elf-ld -T linker.ld kernel.o vga.o io.o paging_asm.o e820.o paging.o pmm.o pic.o idt_asm.o isr.o idt.o kmalloc.o -o kernel.elf
+/c/i686-elf-tools-windows/bin/i686-elf-g++ -ffreestanding -m32 -c shell.cpp -o shell.o
+/c/i686-elf-tools-windows/bin/i686-elf-g++ -ffreestanding -m32 -c vmm.cpp -o vmm.o
+/c/i686-elf-tools-windows/bin/i686-elf-ld -T linker.ld kernel.o vmm.o vga.o io.o paging_asm.o e820.o paging.o pmm.o pic.o idt_asm.o isr.o idt.o kmalloc.o shell.o -o kernel.elf
 /c/i686-elf-tools-windows/bin/i686-elf-objcopy -O binary kernel.elf kernel.bin
 dd if=boot.bin of=boot.img bs=512 conv=notrunc
 dd if=kernel.bin of=boot.img bs=512 seek=5 conv=notrunc
