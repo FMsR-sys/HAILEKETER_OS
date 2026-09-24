@@ -166,6 +166,25 @@ namespace vmm
         pt[pti] = 0;
 
         flush(virt);
+
+        uint32_t count = 0;
+        
+        for (int i = 0;i < 1024;i++)
+        {
+            if (pt[i] & PAGE_HAVE)
+            {
+                count++;
+                break;
+            }
+        }
+
+        if (count == 0)
+        {
+            uint32_t pt_phys = pde_entry & 0xFFFFF000;
+            pmm::pages_release(pt_phys);
+            kernel_pd[pdi] = 0;
+        }
+
         return true;
     }
 
@@ -210,4 +229,5 @@ namespace vmm
         uint32_t d = pte_entry & 0xFFFFF000;
         return d;
     }
+
 }

@@ -6,7 +6,7 @@ uint8_t vga::cursor_x = 0;
 uint8_t vga::cursor_y = 0;
 
 #define BACK_ROWS 512
-uint16_t back_buffer[BACK_ROWS][80];
+uint16_t back_buffer[BACK_ROWS][512];
 uint32_t view_offset = 0;
 uint32_t write_line = 0;
 uint32_t write_col = 0;

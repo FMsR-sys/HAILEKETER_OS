@@ -28,4 +28,30 @@ namespace idt
     void set(uint8_t index , uint32_t offest , uint16_t sel , uint8_t flags);  //中断号，中断处理函数的内存地址，段选择子，门的属性标志字节
 }
 
+extern "C"
+{
+    void isr0();
+    void isr1();
+    void isr2();
+    void isr3();
+    void isr4();
+    void isr4();
+    void isr5();
+    void isr6();
+    void isr7();
+    void isr8();
+    void isr9();
+    void isr10();
+    void isr11();
+    void isr12();
+    void isr13();
+    void isr14();
+    void isr15();
+    void isr16();
+    void isr17();
+    void isr18();
+    void isr19();
+    void isr20();
+}
+
 #endif
