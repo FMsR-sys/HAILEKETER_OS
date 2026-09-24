@@ -14,7 +14,7 @@
   - 输出 16 进制字符
   - 硬件光标控制，边界保护
   - 退格删除字符，跨行退格支持
-  - **120 行后台缓冲区，支持 PageUp/PageDown 翻阅历史日志**
+  - **512 行后台缓冲区，支持 PageUp/PageDown 翻阅历史日志**
 - **内存分页**
   - 构建完整页目录与 1024 张页表
   - 0‑4GB 全地址恒等映射：虚拟地址 = 物理地址
@@ -38,11 +38,18 @@
   - 0xE0 扩展扫描码支持：方向键 ↑ ↓ ← →
   - PageUp / PageDown 翻阅终端历史输出
   - 按键防抖，屏蔽长按刷屏
+- **VMM虚拟内存管理器
+  - 软件标记bit9作为内存堆标记
+  - 错误码体系完成
+  - 基础映射和释放
+  - 物理地址的转换函数
+  - 切换页目录
+  - 刷新TLB缓存
 
 ## 📝 开发计划
 
 1. 交互式内核 Shell，命令解析与内置指令
-2. VMM 虚拟内存管理器、二级页表管理、PAE 扩展
+2. PAE 扩展
 3. CPU 异常处理、完善中断体系
 4. 进程与任务调度
 5. 用户态特权级支持
@@ -56,4 +63,6 @@
 - 开发环境：VSCode + MSYS2
 
 ## 🖼️ 运行效果
-<img width="723" height="457" alt="屏幕截图 2026-09-12 123503" src="https://github.com/user-attachments/assets/bcaf0989-4e82-4e99-b3db-0c2c45cc21d3" />
+<img width="734" height="414" alt="08e633e353063762f50417b85d7a018" src="https://github.com/user-attachments/assets/a05e1be9-e1d2-412f-aa9d-17cab7b3c12a" />
+<img width="751" height="426" alt="f25335def4d0b139d78cae830ee9e47" src="https://github.com/user-attachments/assets/2e3739af-a1b5-47f0-9ee6-69a30581b6a9" />
+
