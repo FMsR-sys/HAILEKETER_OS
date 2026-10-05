@@ -23,4 +23,4 @@ cat boot1.bin boot2.bin > boot.bin
 /c/i686-elf-tools-windows/bin/i686-elf-objcopy -O binary kernel.elf kernel.bin
 dd if=boot.bin of=boot.img bs=512 conv=notrunc
 dd if=kernel.bin of=boot.img bs=512 seek=5 conv=notrunc
-qemu-system-i386 -m 512M -drive format=raw,file=boot.img,if=floppy
+qemu-system-i386 -m 512M -drive format=raw,file=boot.img,if=floppy -serial stdio -d int,cpu_reset,guest_errors,page -D qemu_log.txt

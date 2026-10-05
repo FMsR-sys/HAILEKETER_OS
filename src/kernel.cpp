@@ -8,6 +8,7 @@
 #include "isr.hpp"
 #include "kmalloc.hpp"
 #include "vmm.hpp"
+#include "shell.hpp"
 
 extern "C" void kernel_main()
 {
@@ -144,6 +145,8 @@ extern "C" void kernel_main()
     vga::vga_out_string("All free finished!\nHeap test OK.\n");
 
     asm volatile("sti");
+
+    shell::init();
 
     while(true)
     {

@@ -2,23 +2,26 @@
 #include "pic.hpp"
 #include "vga.hpp"
 #include "io.hpp"
+#include "shell.hpp"
 
 static const char sc_lower[] =
 {
-    0,   0,  '1','2','3','4','5','6','7','8','9','0','-','=', 0,
-    0,  'q','w','e','r','t','y','u','i','o','p','[',']',  0,
-    'a','s','d','f','g','h','j','k','l',';','\'','`', 0,
-    '\\','z','x','c','v','b','n','m',',','.','/', 0,  '*',
-    0,   ' ',' '
+    0, 0, 0, '1','2','3','4','5','6','7','8','9','0','-','=',0,
+    0, 'q','w','e','r','t','y','u','i','o','p','[',']',0,
+    'a','s','d','f','g','h','j','k','l',';','\'','`',0,
+    '\\','z','x','c','v','b','n','m',',','.','/',0,'*',
+    0, ' ', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, '7','8','9','-','4','5','6','+','1','2','3','0','.', 0
 };
 
 static const char sc_upper[] =
 {
-    0,   0,  '!','@','#','$','%','^','&','*','(',')','_','+', 0,
-    0,  'Q','W','E','R','T','Y','U','I','O','P','{','}',  0,
-    'A','S','D','F','G','H','J','K','L',':','"','~', 0,
-    '|','Z','X','C','V','B','N','M','<','>','?', 0,  '*',
-    0,   ' ',' '
+    0, 0, 0, '!','@','#','$','%','^','&','*','(',')','_','+',0,
+    0, 'Q','W','E','R','T','Y','U','I','O','P','{','}',0,
+    'A','S','D','F','G','H','J','K','L',':','"','~',0,
+    '|','Z','X','C','V','B','N','M','<','>','?',0,'*',
+    0, ' ', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, '7','8','9','-','4','5','6','+','1','2','3','0','.', 0
 };
 
 static uint8_t last_scan = 0xFF;
@@ -49,46 +52,36 @@ extern "C" void irq1_handler()
             if(code == 0x48)
             {
                 vga::scroll_up();
-                pic::eoi(1);
-                return;
             }
 
             if(code == 0x50)
             {
                 vga::scroll_down();
-                pic::eoi(1);
-                return;
             }
 
             if(code == 0x49)
             {
                 vga::scroll_up();
-                pic::eoi(1);
-                return;
             }
 
             if(code == 0x51)
             {
                 vga::scroll_down();
-                pic::eoi(1);
-                return;
             }
 
             if(code == 0x4B)
             {
                 if(vga::cursor_x > 0) vga::cursor_x--;
                 vga::vga_move_cursor(vga::cursor_x, vga::cursor_y);
-                pic::eoi(1);
-                return;
             }
 
             if(code == 0x4D)
             {
                 if(vga::cursor_x < vga::VGA_WIDE - 1) vga::cursor_x++;
                 vga::vga_move_cursor(vga::cursor_x, vga::cursor_y);
-                pic::eoi(1);
-                return;
             }
+            pic::eoi(1);
+            return;
         }
     }
 
@@ -124,14 +117,14 @@ extern "C" void irq1_handler()
 
     if(code == 0x1C)
     {
-        vga::put_char('\n');
+        shell::enter();
         pic::eoi(1);
         return;
     }
 
     if(code == 0x0E)
     {
-        vga::put_char('\b');
+        shell::put_char('\b');
         pic::eoi(1);
         return;
     }
@@ -145,8 +138,9 @@ extern "C" void irq1_handler()
             ch = sc_lower[code];
         if(ch != 0)
         {
-            vga::put_char(ch);
+            shell::put_char(ch);
         }
-    }
     pic::eoi(1);
+    return;
+    }
 }
