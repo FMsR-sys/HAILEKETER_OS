@@ -8,6 +8,7 @@
 #include <QProcess>
 #include <QStringList>
 #include <QProcessEnvironment>
+#include <QString>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -33,6 +34,13 @@ private slots:
     void on_pushButton_2_clicked();
 
     void on_pushButton_3_clicked();
+    void find_all(QStringList const &REL_SUL , QStringList &result);
+    void find(QString const &PATH, const QStringList &REL_SUL, QStringList &result);
+    void on_pushButton_4_clicked();
+    void fillFileList(const QStringList &absFileList);
+
+    void on_pushButton_5_clicked();
+    QStringList get_check_file();
 
 private:
     Ui::MainWindow *ui;

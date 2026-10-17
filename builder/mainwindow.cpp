@@ -16,6 +16,37 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+void MainWindow::find_all(QStringList const &REL_SUL , QStringList &result)
+{
+    //想换currentPath就改这里
+    QString dirPATH = QCoreApplication::applicationDirPath();
+    find(dirPATH, REL_SUL, result);
+}
+void MainWindow::find(QString const &PATH, const QStringList &REL_SUL, QStringList &result)
+{
+    QDir dir(PATH);
+    if (!dir.exists())
+        return;
+
+    dir.setFilter(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
+    QFileInfoList entryList = dir.entryInfoList();
+
+    for (const QFileInfo &info : entryList)
+    {
+        if (info.isDir())
+        {
+            find(info.absoluteFilePath(), REL_SUL, result);
+        }
+        else if (info.isFile())
+        {
+            QString suf = info.suffix().toLower();
+            if (REL_SUL.contains(suf))
+            {
+                result.append(info.absoluteFilePath());
+            }
+        }
+    }
+}
 
 bool MainWindow::add_sul(QString sul)
 {
@@ -40,9 +71,9 @@ void MainWindow::on_pushButton_clicked()
     QString exe_PATH = QCoreApplication::applicationFilePath();
     QString exe_Dir = QCoreApplication::applicationDirPath();
 
-    ui->label->setText("当前目录：" + exe_PATH + "/" + exe_Dir);
+    ui->ab->setText("当前目录：" + exe_PATH);
 
-    QMessageBox::information(this,"设置完成","当前完整目录：" + exe_PATH + "/" + exe_Dir);
+    QMessageBox::information(this,"设置完成","当前完整目录：" + exe_PATH);
 }
 
 bool MainWindow::check_tools()
@@ -145,3 +176,59 @@ void MainWindow::on_pushButton_3_clicked()
     }
 }
 
+
+void MainWindow::on_pushButton_4_clicked()
+{
+    QStringList fileResult;
+    find_all(REL_SUL, fileResult);
+    qDebug() << "扫描到文件列表：" << fileResult;
+    // 新增：填充UI列表
+    fillFileList(fileResult);
+}
+
+void MainWindow::fillFileList(const QStringList &absFileList)
+{
+    // 获取扫描根目录（exe所在目录）
+    QString rootPath = QCoreApplication::applicationDirPath();
+    QDir rootDir(rootPath);
+    // 清空列表旧内容
+    ui->abc->clear();
+
+    for(const QString &absPath : absFileList)
+    {
+        // 计算相对路径
+        QString relPath = rootDir.relativeFilePath(absPath);
+
+        relPath.replace("/", "\\");
+
+        // 创建列表条目
+        QListWidgetItem *item = new QListWidgetItem(relPath, ui->abc);
+        // 开启复选框
+        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+        // 默认未勾选
+        item->setCheckState(Qt::Unchecked);
+
+        // 【关键】把完整绝对路径存到item的data里面，后面编译要用
+        item->setData(Qt::UserRole, absPath);
+    }
+}
+void MainWindow::on_pushButton_5_clicked()
+{
+    QStringList selected = get_check_file();
+    qDebug() << "选中文件绝对路径：" << selected;
+}
+
+QStringList MainWindow::get_check_file()
+{
+    QStringList check;
+    for (int i = 0 ; i < ui->abc->count() ; i++)
+    {
+        QListWidgetItem* item = ui->abc->item(i);
+        if(item->checkState() == Qt::Checked)
+        {
+            QString z = item->data(Qt::UserRole).toString();
+            check << z;
+        }
+    }
+    return check;
+}
