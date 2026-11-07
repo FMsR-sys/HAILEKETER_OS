@@ -4,5 +4,6 @@ typedef unsigned char uint8_t;
 
 extern "C" void irq1_stub();
 extern "C" void irq1_handler();
+extern "C" void isr14_stub();      // 页错误
 
 #endif

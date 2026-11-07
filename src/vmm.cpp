@@ -1,8 +1,13 @@
 #include "vmm.hpp"
 #include "pmm.hpp"
 #include "kmalloc.hpp"
+#include "vga.hpp"
+#include "paging.hpp"
 
 //阿巴阿巴 ^q^
+
+extern uint32_t __kernel_start;
+extern uint32_t __kernel_end;
 
 void* memset(void* dst, uint8_t val, uint32_t len)  //dst起始地址，val填充值，len字节
 {
@@ -15,8 +20,7 @@ void* memset(void* dst, uint8_t val, uint32_t len)  //dst起始地址，val填�
 }
 
 namespace vmm
-{
-    ERROR err = SUCCESS;
+{    ERROR err = SUCCESS;
     pde_t* kernel_pd;
 
     void cr3(uint32_t c)
@@ -84,40 +88,17 @@ namespace vmm
     {
         err = SUCCESS;
 
-        uint32_t pd_phys = pmm::pages_allocate();
+        // 复用 identity_paging_init() 建好的页目录，不新建
+        // （新建会让那部分恒等映射丢失，写页表时立刻缺页）
+        kernel_pd = reinterpret_cast<pde_t*>(identity_paging_dir());
 
-        if (pd_phys == 0)
+        if (kernel_pd == nullptr)
         {
-            err = ERR_PMM_ALLOCATE;
+            err = ERR_NO_INIT;
             return;
         }
 
-        memset(reinterpret_cast<void*>(pd_phys), 0, 0x1000);
-
-        kernel_pd = reinterpret_cast<pde_t*>(pd_phys);
-
-        //内核基础部分
-        for (uint32_t virt = 0;virt < 0x1000000;virt += 0x1000)
-        {
-            map(virt,virt,PAGE_HAVE | PAGE_RW);
-        }
-
-        //堆区域
-        uint32_t heap_start = heap::HEAP_START;
-        uint32_t heap_size = heap::HEAP_SIZE;
-        uint32_t heap_end = heap_start + heap_size;
-
-        if (heap_end % 0x1000 != 0)  //4K补全兜底
-        {
-            heap_end += (0x1000 - (heap_end % 0x1000));
-        }
-
-        for (uint32_t virt = heap_start;virt < heap_end;virt += 0x1000)
-        {
-            map(virt,virt,PAGE_HAVE | PAGE_RW | PAGE_HEAP);
-        }
-
-        cr3(pd_phys);  //加载页目录
+        // 其余区域交给缺页按需补，这里不再预先映射
     }
 
     bool unmap(uint32_t a)
@@ -230,4 +211,79 @@ namespace vmm
         return d;
     }
 
+    // 缺页处理：按需分配物理页并建立恒等映射
+    // 返回 true 表示已修复，false 表示无法处理（真错误）
+    bool handle_fault(uint32_t fault_addr, uint32_t error_code)
+    {
+        // 地址需要 4K 对齐
+        uint32_t page_addr = fault_addr & 0xFFFFF000;
+
+        // 如果这个虚拟地址已经有映射（比如写保护），不能自动修复
+        if (kernel_pd == nullptr)
+        {
+            return false;
+        }
+
+        uint32_t pdi = (page_addr >> 22) & 0x3FF;
+        uint32_t pti = (page_addr >> 12) & 0x3FF;
+
+        pde_t pde_entry = kernel_pd[pdi];
+        if (pde_entry & PAGE_HAVE)
+        {
+            pte_t* pt = reinterpret_cast<pte_t*>(pde_entry & 0xFFFFF000);
+            if (pt[pti] & PAGE_HAVE)
+            {
+                // 已映射却触发缺页，多半是权限问题，不自动处理
+                return false;
+            }
+        }
+
+        uint32_t phys = pmm::pages_allocate();
+        if (phys == 0)
+        {
+            return false;   // 内存耗尽
+        }
+
+        // 清空新页，避免把旧数据读出去
+        memset(reinterpret_cast<void*>(phys), 0, 0x1000);
+
+        if (!map(page_addr, phys, PAGE_HAVE | PAGE_RW))
+        {
+            pmm::pages_release(phys);
+            return false;
+        }
+
+        return true;
+    }
+
+}
+
+// 页错误中断入口 (由 idt.asm 的 isr14_stub 调用)
+extern "C" void page_fault_handler(uint32_t error_code)
+{
+    uint32_t fault_addr;
+    asm volatile("mov %%cr2, %0" : "=r"(fault_addr));
+
+    if (vmm::handle_fault(fault_addr, error_code))
+    {
+        return;     // 已按需补上，iret 回去继续执行
+    }
+
+    // 真正的错误：打印信息后挂起
+    vga::vga_out_string("\n[PAGE FAULT] unhandled\n  CR2 = ");
+    vga::vga_out_sixteen(fault_addr);
+    vga::vga_out_string("\n  ERR = ");
+    vga::vga_out_sixteen(error_code);
+    vga::vga_out_string("\n  P = ");
+    vga::vga_out_sixteen((error_code >> 0) & 1);
+    vga::vga_out_string(" W = ");
+    vga::vga_out_sixteen((error_code >> 1) & 1);
+    vga::vga_out_string(" U = ");
+    vga::vga_out_sixteen((error_code >> 2) & 1);
+    vga::vga_out_string("\n");
+
+    for (;;)
+    {
+        asm volatile("cli; hlt");
+    }
 }

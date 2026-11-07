@@ -1,8 +1,8 @@
 #include "e820.hpp"
 #include "vga.hpp"
 
-#define E820_TABLE_ADDR   0x5000
-#define E820_COUNT_ADDR   0x500
+#define E820_TABLE_ADDR   E820_BUF
+#define E820_COUNT_ADDR   E820_ENTRY_CNT
 #define E820_ENTRY_SIZE   24
 
 namespace e820
@@ -10,16 +10,24 @@ namespace e820
     void e820_out()
     {
         uint16_t count = *(reinterpret_cast<uint16_t*>(E820_COUNT_ADDR));
-        vga::vga_out_string("E820 Memory Map:\n");
+
+        vga::vga_out_string("E820 Memory Map (");
+        vga::vga_out_sixteen(count);
+        vga::vga_out_string(" entries)\n");
 
         for (int i = 0; i < count; i++)
         {
             e820_record* rec = reinterpret_cast<e820_record*>(E820_TABLE_ADDR + i * E820_ENTRY_SIZE);
 
-            vga::vga_out_string("Base: ");
+            if (rec->base_high != 0 || rec->len_high != 0)
+            {
+                continue;   // 跳过 4GB 以上的区域，32 位用不到
+            }
+
+            vga::vga_out_string(rec->type == 1 ? "  [usable] " : "  [resv  ] ");
             e820_out_number(rec->base_low);
-            vga::vga_out_string("  Type: ");
-            e820_out_number(rec->type);
+            vga::vga_out_string(" len=");
+            e820_out_number(rec->len_low);
             vga::vga_out_string("\n");
         }
     }
@@ -37,6 +45,42 @@ namespace e820
         vga::vga_out_string(buf);
     }
 
+    uint32_t e820_max_usable_end()
+    {
+        uint16_t count = *(reinterpret_cast<uint16_t*>(E820_COUNT_ADDR));
+        uint32_t max_end = 0;
+
+        for (int i = 0; i < count; i++)
+        {
+            e820_record* ent = reinterpret_cast<e820_record*>(
+                E820_TABLE_ADDR + i * E820_ENTRY_SIZE);
+
+            if (ent->type != 1 || ent->base_high != 0)
+            {
+                continue;
+            }
+
+            // 跳过 4GB 以上
+            if (ent->len_high != 0)
+            {
+                continue;
+            }
+
+            uint32_t end = ent->base_low + ent->len_low;
+            if (end > max_end)
+            {
+                max_end = end;
+            }
+        }
+
+        // 32 位地址空间只到 4GB
+        if (max_end > 0xFFFFF000U)
+        {
+            max_end = 0xFFFFF000U;
+        }
+        return max_end;
+    }
+
     uint32_t e820_find_first_free(uint32_t min_addr, uint32_t need_size)
     {
         uint16_t count = *(reinterpret_cast<uint16_t*>(E820_COUNT_ADDR));
@@ -44,7 +88,7 @@ namespace e820
         for (int i = 0; i < count; i++)
         {
             e820_record* ent = reinterpret_cast<e820_record*>(
-                E820_BUF + i * E820_ENTRY_SIZE);
+                E820_TABLE_ADDR + i * E820_ENTRY_SIZE);
 
             if (ent->type == 1 && ent->base_high == 0)
             {

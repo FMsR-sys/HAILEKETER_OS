@@ -4,30 +4,40 @@ SECTIONS
 {
     . = 0x100000;
 
-    .text ALIGN(4K) :
+    __kernel_start = .;
+
+    .text ALIGN(4) :
     {
         *(.multiboot)
-        *(.text)
+        *(.text*)
     }
 
-    .rodata ALIGN(4K) :
+    .rodata ALIGN(4) :
     {
-        *(.rodata)
+        *(.rodata*)
     }
 
-    .data ALIGN(4K) :
+    .data ALIGN(4) :
     {
-        *(.data)
+        *(.data*)
     }
 
-    .bss ALIGN(4K) :
+    .bss ALIGN(4) (NOLOAD) :
     {
         __bss_start = .;
         *(COMMON)
-        *(.bss)
+        *(.bss*)
         __bss_end = .;
     }
 
-    __kernel_start = 0x100000;
     __kernel_end = .;
+
+    /* 丢弃不需要的段，否则它们会挤进 .text 后面导致 objcopy 截断后面的段 */
+    /DISCARD/ :
+    {
+        *(.eh_frame)
+        *(.eh_frame_hdr)
+        *(.comment)
+        *(.note*)
+    }
 }

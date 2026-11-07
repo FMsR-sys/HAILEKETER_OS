@@ -24,12 +24,16 @@ extern "C" void kernel_main()
     vga::vga_clean();
     e820::e820_out();
 
-    uint32_t pd_addr = 0x200000;
     vga::vga_out_string("\nGoing to turn paging on...");
-    identity_paging_init(pd_addr);
+    uint32_t mem_end = e820::e820_max_usable_end();
+    identity_paging_init(mem_end);
     vga::vga_out_string("\nPaging ON!");
 
     pmm::init();
+    for(uint32_t addr = 0x000E0000; addr < 0x00100000; addr += 4096)
+    {
+        pmm::mark_used(addr);
+    }
     vga::vga_out_string("\npmm init ok!\n");
 
     vmm::init();
@@ -109,6 +113,7 @@ extern "C" void kernel_main()
 
     idt::init();
     idt::set(0x21, (uint32_t)irq1_stub, 0x08, 0x8E);
+    idt::set(0x0E, (uint32_t)isr14_stub, 0x08, 0x8E);   // 页错误，用于按需分页
     pic::unmask(1);
     vga::vga_out_string("idt finish!\n");
 

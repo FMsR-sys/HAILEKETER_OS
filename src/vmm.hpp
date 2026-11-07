@@ -39,6 +39,10 @@ namespace vmm
     uint32_t get_b(uint32_t a);  //获得虚拟地址a的物理地址，无效返回0
     void cr3(uint32_t c);  //写入cr3寄存器，切换页目录
     void flush(uint32_t a);  //刷新a的TLB缓存，a为虚拟地址
+    bool handle_fault(uint32_t fault_addr, uint32_t error_code);  //缺页按需分配，true=已修复
+
+    // 页错误中断 (INT 0x0E) 的 C 入口，由 idt.asm 的 isr14_stub 调用
+    extern "C" void page_fault_handler(uint32_t error_code);
 }
 
 #endif

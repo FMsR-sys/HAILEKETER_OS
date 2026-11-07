@@ -1,6 +1,7 @@
 [bits 32]
 global enable_paging
 enable_paging:
+    mov eax, [esp+4]        ; 从栈上取第一个参数 (pd_phys)
     mov cr3, eax
     mov eax, cr0
     or eax, 0x80000000

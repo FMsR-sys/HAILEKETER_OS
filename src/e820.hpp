@@ -5,7 +5,7 @@ typedef unsigned char  uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;
 
-#define E820_BUF        0x5000
+#define E820_BUF        0x7000
 #define E820_ENTRY_CNT  0x500
 
 struct e820_record
@@ -23,6 +23,7 @@ namespace e820
     void e820_out();
     uint32_t e820_find_first_free(uint32_t min_addr, uint32_t need_size);
     void e820_out_number(uint32_t num);
+    uint32_t e820_max_usable_end();   // 所有可用区域的最高结束地址
 }
 
 #endif

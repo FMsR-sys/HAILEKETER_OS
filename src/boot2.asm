@@ -1,10 +1,10 @@
 [bits 16]
 org 0x7e00
 
-E820_BUF        equ 0x5000
+E820_BUF        equ 0x7000
 E820_ENTRY_CNT  equ 0x500
 KERNEL_BASE     equ 0x100000
-KERNEL_SIZE     equ 32 * 512
+KERNEL_SIZE     equ 256 * 512      ; 128KB，需 >= kernel.bin 实际大小 (当前 16KB)
 KERNEL_END      equ KERNEL_BASE + KERNEL_SIZE
 STACK_SAFE_LOW  equ 0x80000
 STACK_SAFE_HIGH equ 0xA0000
@@ -27,9 +27,9 @@ start:
     ;该死，es没初始化
     mov es,ax
     mov ah,0x02
-    mov al,32
+    mov al,32         ; 读 32 扇区 = 16KB
     mov ch,0
-    mov cl,6
+    mov cl,6          ; 内核从第 6 扇区开始（build.sh: dd seek=5）
     mov dh,0
     mov bx,0x1000
     int 0x13
@@ -55,18 +55,21 @@ get_e820_map:
     push cx
     push dx
     push si
-    push ebx
+    push bx
 
     xor ax,ax
     mov [E820_ENTRY_CNT],ax
 
-    mov ebx,0
+    mov ebx,0           ; BIOS 的 continuation
+    mov si,0            ; 我们自己的偏移计数（字节）
 
     mov ax,ds
     mov es,ax
-    mov di,E820_BUF
 
 .e820_loop:
+    mov di,E820_BUF
+    add di,si           ; 每轮重新算出目标地址
+
     mov eax,0xE820
     mov edx,0x534D4150
     mov ecx,24
@@ -78,18 +81,17 @@ get_e820_map:
     jne .e820_done
 
     inc word [E820_ENTRY_CNT]
-
-    add di,24
+    add si,24
 
     cmp ebx,0
     jnz .e820_loop
 
 .e820_done:
+    pop bx
     pop si
     pop dx
     pop cx
     pop di
-    pop ebx
     ret
 
 enable_a20:
